@@ -1,0 +1,479 @@
+# excel-converter
+spa返點名單格式轉換
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel 轉換工具</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .upload-area {
+            border: 2px dashed #667eea;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+            background-color: #f8f9ff;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background-color: #f0f2ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #764ba2;
+            background-color: #e8e9ff;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+
+        .upload-text {
+            color: #333;
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+
+        .upload-hint {
+            color: #999;
+            font-size: 12px;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .file-info {
+            display: none;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f0f9ff;
+            border-left: 4px solid #667eea;
+            border-radius: 5px;
+        }
+
+        .file-info.show {
+            display: block;
+        }
+
+        .file-name {
+            color: #333;
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+
+        .file-size {
+            color: #666;
+            font-size: 12px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-convert {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-convert:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-convert:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-reset {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .btn-reset:hover {
+            background: #d0d0d0;
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+
+        .message.show {
+            display: block;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .spinner-text {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .features {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 1px solid #eee;
+        }
+
+        .features-title {
+            color: #333;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+            color: #999;
+        }
+
+        .feature-list {
+            list-style: none;
+        }
+
+        .feature-list li {
+            padding: 8px 0;
+            color: #666;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+        }
+
+        .feature-list li:before {
+            content: "✓";
+            color: #667eea;
+            font-weight: bold;
+            margin-right: 10px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Excel 轉換工具</h1>
+            <p class="subtitle">上傳 Excel 檔案，自動替換館名、調整格式並輸出 CSV</p>
+        </div>
+
+        <div id="messageBox" class="message"></div>
+        <div id="loadingBox" class="loading">
+            <div class="spinner"></div>
+            <div class="spinner-text">處理中...</div>
+        </div>
+
+        <div id="fileInfoBox" class="file-info">
+            <div class="file-name">已選擇檔案：<span id="fileName"></span></div>
+            <div class="file-size">大小：<span id="fileSize"></span></div>
+        </div>
+
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📁</div>
+            <div class="upload-text">拖放 Excel 檔案到這裡</div>
+            <div class="upload-hint">或點擊選擇檔案</div>
+            <input type="file" id="fileInput" accept=".xlsx,.xls">
+        </div>
+
+        <div class="btn-group">
+            <button class="btn-convert" id="convertBtn" disabled>轉換</button>
+            <button class="btn-reset" id="resetBtn">重設</button>
+        </div>
+
+        <div class="features">
+            <div class="features-title">功能特色</div>
+            <ul class="feature-list">
+                <li>自動替換館名代碼</li>
+                <li>調整 D、E 欄格式</li>
+                <li>輸出 UTF-8 編碼 CSV</li>
+                <li>完全本地處理（隱私安全）</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const convertBtn = document.getElementById('convertBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const messageBox = document.getElementById('messageBox');
+        const loadingBox = document.getElementById('loadingBox');
+        const fileInfoBox = document.getElementById('fileInfoBox');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+
+        let selectedFile = null;
+
+        // 替換規則
+        const REPLACEMENTS = {
+            'SPA高夢館': 'AA00',
+            'SPA南紡館': 'AB00',
+            'SPA南山館': 'AH00',
+            'SPA湖美館': 'AG00',
+            'SPA萬怡館': 'AF00',
+            'SPA時代館': 'AD00',
+            '高夢館': 'AA00',
+            '南紡館': 'AB00',
+            '南山館': 'AH00',
+            '湖美館': 'AG00',
+            '萬怡館': 'AF00',
+            '時代館': 'AD00',
+            '高夢': 'AA00',
+            '南紡': 'AB00',
+            '南山': 'AH00',
+            '湖美': 'AG00',
+            '萬怡': 'AF00',
+            '時代': 'AD00',
+        };
+
+        // 點擊上傳區域
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        // 拖放事件
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        // 檔案選擇
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        // 處理檔案
+        function handleFiles(files) {
+            if (files.length === 0) return;
+
+            const file = files[0];
+
+            // 驗證檔案類型
+            if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
+                showMessage('只支援 Excel 檔案 (.xlsx, .xls)', 'error');
+                return;
+            }
+
+            selectedFile = file;
+            fileName.textContent = file.name;
+            fileSize.textContent = (file.size / 1024).toFixed(2) + ' KB';
+            fileInfoBox.classList.add('show');
+            convertBtn.disabled = false;
+            hideMessage();
+        }
+
+        // 轉換
+        convertBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
+
+            convertBtn.disabled = true;
+            loadingBox.classList.add('show');
+            hideMessage();
+
+            try {
+                // 讀取 Excel 檔案
+                const arrayBuffer = await selectedFile.arrayBuffer();
+                const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+                // 處理資料
+                const headers = data[0];
+                const rows = data.slice(1);
+
+                // 替換文字
+                const processedRows = rows.map(row => {
+                    return row.map(cell => {
+                        if (typeof cell === 'string') {
+                            let result = cell;
+                            // 優先長的替換
+                            const sortedKeys = Object.keys(REPLACEMENTS).sort((a, b) => b.length - a.length);
+                            for (const key of sortedKeys) {
+                                result = result.replaceAll(key, REPLACEMENTS[key]);
+                            }
+                            return result;
+                        }
+                        return cell;
+                    });
+                });
+
+                // D欄和E欄轉為文字
+                const finalRows = processedRows.map(row => {
+                    if (row[3] !== undefined) row[3] = String(row[3]);
+                    if (row[4] !== undefined) row[4] = String(row[4]);
+                    return row;
+                });
+
+                // 生成 CSV
+                const csvContent = [
+                    headers.map(h => `"${String(h).replace(/"/g, '""')}"`).join(','),
+                    ...finalRows.map(row => 
+                        row.map(cell => {
+                            if (cell === null || cell === undefined) return '';
+                            return `"${String(cell).replace(/"/g, '""')}"`;
+                        }).join(',')
+                    )
+                ].join('\n');
+
+                // 下載
+                const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+                const newFileName = selectedFile.name.replace(/\.(xlsx|xls)$/, '_轉換.csv');
+                link.setAttribute('href', url);
+                link.setAttribute('download', newFileName);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                showMessage('✓ 轉換成功！檔案已下載', 'success');
+            } catch (error) {
+                console.error(error);
+                showMessage('轉換失敗：' + error.message, 'error');
+            } finally {
+                loadingBox.classList.remove('show');
+                convertBtn.disabled = selectedFile ? false : true;
+            }
+        });
+
+        // 重設
+        resetBtn.addEventListener('click', () => {
+            selectedFile = null;
+            fileInput.value = '';
+            fileInfoBox.classList.remove('show');
+            convertBtn.disabled = true;
+            hideMessage();
+        });
+
+        // 顯示訊息
+        function showMessage(msg, type) {
+            messageBox.textContent = msg;
+            messageBox.className = 'message show ' + type;
+        }
+
+        // 隱藏訊息
+        function hideMessage() {
+            messageBox.classList.remove('show');
+        }
+    </script>
+</body>
+</html>
